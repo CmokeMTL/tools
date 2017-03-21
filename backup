@@ -1,0 +1,213 @@
+#!/bin/bash
+##              Interactive Local Backup Script
+##          DEVIN COTE-MUNROE FOR DEVIN COTE-MUNROE
+##                         3/20/2017
+##			   GNU GPL-3
+
+## STATIC VARS
+
+FILEDATE="`date | awk -F " " '{ print tolower($2)"."$3"."$6 }'`"
+FILENAME="${HOSTNAME}.${USER}.${FILEDATE}.tar.gz"
+#LOCALBUP="${$LOCDEST}/${FILENAME}"
+#REMOBUP="${$REMDEST}/${FILENAME}"
+
+## Present the application
+
+echo
+    echo -n " Hello ${USER}, you are about to launch a simple backup application! "
+    sleep 1
+echo
+
+## Select the file you wish to backup
+
+while [[  ! -d ${TOZIP} ]];do
+    echo -n "Please enter an existing directory you wish to backup: "
+	read TOZIP
+    echo
+done
+
+## Select the local directory in which to place the archive
+
+sleep 1
+    echo -n "Please enter the local backup destination: "
+ 	read LOCDEST
+
+## Make sure there is a directory corresponding to input, if not prompt for input
+
+while [  ! -d ${LOCDEST} ]; do
+echo    
+	echo -n " ${LOCDEST} is not a local directory, would you like to create it now?(Y/N): "
+          read ANSWER
+
+## Create directory if statement
+ 
+	  if [[  ${ANSWER} =~ ^([yY][eE][sS]|[yY])+$  ]];then
+      		sudo mkdir -p ${LOCDEST}
+	  else
+echo
+		echo -n " Please enter the backup folder you want to create: "
+		  read LOCDEST
+	  fi
+done
+
+## On with the show
+
+sleep 1
+echo
+    echo " You have selected ${LOCDEST} as your local backup directory. "
+    read -n1 -r -p " Press any key to continue."
+
+echo
+	sudo tar czf "${LOCDEST}/${FILENAME}" ${TOZIP}
+sleep 1
+echo
+
+## QA Conditional
+
+if [  -f "${LOCDEST}/${FILENAME}"  ];then
+
+## Query user on remote backup
+
+	echo -n " SUCCESS!! Would you like to push your new back up to a remote backup server?(Y/N) "
+	  read ANSWER
+
+sleep 1
+echo
+
+	if  [[ !  ${ANSWER} =~ ^([yY][eE][sS]|[yY])+$  ]];then
+
+	  echo -n " You have successfully create a local backup of ${TOZIP} in ${LOCDEST} "
+echo	
+	  exit 1
+echo
+	fi
+else
+	echo -n " Archiving of ${TOZIP} failed. QA does not support this error, please try again"
+echo
+	exit 1
+sleep 1
+echo
+
+fi
+
+sleep 1
+echo 
+
+## Select and verify the remote host
+
+echo -n "Please enter the IP of the remote backup server: "
+	read RHOST
+
+## Make sure IP is valid
+
+while [[  !  ${RHOST}  =~  ^([1-9]{1,3}"."[1-9]{1,3}"."[1-9]{1,3}"."[1-9]{1,3})$  ]];do
+	echo -n "Please enter a valid IP: "
+	    read RHOST
+done
+echo
+
+## Make sure backup host is up
+
+		if [[    ${RHOST}  =~  ^([1-9]{1,3}"."[1-9]{1,3}"."[1-9]{1,3}"."[1-9]{1,3})$  ]];then
+		echo
+		    echo -n " IP is valid. Please hold while we verify the host is up: "
+		    ping -q -c 3 ${RHOST}
+
+## If host is not up choose ip if error
+
+echo
+		while [[  $?  !=  0  ]];do
+			echo -n "Please enter the IP of a host that is UP: "
+			  read RHOST
+
+                    if [[    ${RHOST}  =~  ^([1-9]{1,3}"."[1-9]{1,3}"."[1-9]{1,3}"."[1-9]{1,3})$  ]];then
+echo
+                      echo -n " IP is valid. Please hold while we verify the host is up: "
+                     ping -q -c 3 ${RHOST}
+
+echo
+echo
+		    fi
+
+		done
+
+		fi
+
+## Select and verify the used Port number (if default press enter)
+
+echo -n "Please enter the Port used to connect to the backup server enter 22 for default: " 
+	read PORT
+
+## Make sure the Port is a valid number
+while [[ !  ${PORT}  =~ ^([0,2-9]{1,6})$  ]];do
+	echo -n "Please enter a valid port number (up to 6 numbers between 0,2-9): "
+	    read PORT
+done
+
+## Make sure the connection to the backup host with the selected tcp socket is possible
+sleep 1
+echo
+echo -n " Testing to make sure your SSH socket will connect..."
+echo
+# if [[    ${RHOST} =~ ^([1-9]{1,3}"."[1-9]{1,3}"."[1-9]{1,3}"."[1-9]{1,3})$ -a "$PORT" =~ ^([0,2-9]{1,6})$  ]];then
+	ssh -q  -p${PORT} ${USER}@${RHOST} exit  
+# fi
+		    if [[  $?  == 0  ||   ! ${PORT} =~ ^([0,2-9]{1,6})$  ]];then
+			echo -n " Connection is Possible!"
+echo
+echo
+		    fi
+
+	while [[  $? !=  0  ]];do 
+	    echo -n " Wrong or invalid port number, try again: "
+		read PORT
+	    ssh -q -p${PORT} ${USER}@${RHOST} exit
+
+		    if [[  $?  == 0  ||   ! ${PORT} =~ ^([0,2-9]{1,6})$  ]];then
+			echo -n " Connection is Possible!"
+echo
+			break
+echo
+		    fi
+
+	done
+## Select the destination for the backup on the remote host
+
+echo -n " Please select the remote backup directory (Cannot be in / ): "
+	read REMDEST
+echo
+sleep 1
+
+## Confirm the remote backup directory exists
+
+while (ssh -p${PORT} ${USER}@${RHOST} "[[  ! -d ${REMDEST}  ]]");do
+	echo -n " That remote directory does not exist "
+	echo -n " Please enter a valid directory: "
+	  read REMDEST
+
+	if (ssh -p${PORT} ${USER}@${RHOST}  "[[  -d ${REMDEST}  ]]");then
+	  echo -n " The remote directory ${REMDEST} exists on ${RHOST}"
+echo
+	  break
+	fi
+done
+
+sleep 1
+echo
+
+## Copy the file using the parameters
+
+sudo scp -P ${PORT} "${LOCDEST}/${FILENAME}" ${USER}@${RHOST}:${REMDEST}
+
+# Make sure
+
+sleep 1
+echo
+
+        if (ssh -p${PORT} ${USER}@${RHOST} "[[  -d "${REMDEST}/${FILENAME}"  ]]");then
+		echo -n "You have succesfully completed your remote backup of ${TOZIP} on ${RHOST}"
+	else
+		echo -n "Something went wrong that the script cannot forsee, try again"
+echo
+	fi
+echo
