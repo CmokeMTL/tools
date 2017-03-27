@@ -1,7 +1,5 @@
 #!/bin/sh
-#Devin Cote-Munroe for Netelligent Hosting Services Last updated 28/12/2016
-#v.1.2
-## wget and run wksystems b4 EOF???
+#Devin Cote-Munroe // GNU-GPL3
 
 #define users
 echo
