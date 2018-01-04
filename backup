@@ -5,8 +5,7 @@
 ##			   GNU GPL-3
 
 ## STATIC VARS
-
-FILEDATE="`date | awk -F " " '{ print tolower($2)"."$3"."$6 }'`"
+FILEDATE="`date +'%d.%m.%y`"
 FILENAME="${HOSTNAME}.${USER}.${FILEDATE}.tar.gz"
 #LOCALBUP="${$LOCDEST}/${FILENAME}"
 #REMOBUP="${$REMDEST}/${FILENAME}"
