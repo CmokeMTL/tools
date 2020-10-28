@@ -1,0 +1,14 @@
+# VARS
+LOCKFILE$=<script root directory and lock file>
+
+# Verify this script is not running
+if [[ -f ${LOCKFILE} ]]; then
+       echo "This script is already running, terminating"
+       exit
+fi
+
+# Create lock file
+
+if [[ -f != ${LOCKFILE} ]]; then
+	touch ${LOCKFILE
+fi
